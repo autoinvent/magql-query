@@ -22,18 +22,14 @@ export class MagqlQuery {
   }
 
   buildQuery (modelName, queryType) {
-    this.modelName = modelName
-
     return jsonToGraphQLQuery(this.queryBuilder({ modelName, queryType }))
   }
 
   sendRequest (query, variables) {
-    const context = { modelName: this.modelName, query, variables }
-
     return this.graphQLClient
       .request(query, variables)
-      .then(data => ({ context, data, error: false }))
-      .catch(err => ({ context, data: null, error: err }))
+      .then(data => ({ data, error: false }))
+      .catch(err => ({ data: null, error: err }))
   }
 
   buildAndSendRequest (modelName, variables, queryType) {
