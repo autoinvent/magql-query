@@ -16,21 +16,29 @@ search
 
 export class MagqlQuery {
   constructor (schema, url) {
-    this.url = url
+    this.graphQLClient = new GraphQLClient(url)
 
     this.queryBuilder = makeQueryBuilder(schema)
   }
 
-  sendGraphqlRequest (modelName, variables, queryType) {
-    const graphQLClient = new GraphQLClient(this.url)
-    const query = jsonToGraphQLQuery(
-      this.queryBuilder({ modelName, queryType })
-    )
-    const context = { modelName, query, variables }
+  buildQuery (modelName, queryType) {
+    this.modelName = modelName
 
-    return graphQLClient()
+    return jsonToGraphQLQuery(this.queryBuilder({ modelName, queryType }))
+  }
+
+  sendRequest (query, variables) {
+    const context = { modelName: this.modelName, query, variables }
+
+    return this.graphQLClient
       .request(query, variables)
       .then(data => ({ context, data, error: false }))
       .catch(err => ({ context, data: null, error: err }))
+  }
+
+  buildAndSendRequest (modelName, variables, queryType) {
+    const query = this.buildQuery(modelName, queryType)
+
+    this.sendRequest(query, variables)
   }
 }
