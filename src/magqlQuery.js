@@ -35,6 +35,6 @@ export class MagqlQuery {
   buildAndSendRequest (modelName, variables, queryType) {
     const query = this.buildQuery(modelName, queryType)
 
-    this.sendRequest(query, variables)
+    return this.sendRequest(query, variables)
   }
 }
