@@ -20,7 +20,8 @@ const QueryType = {
   TOOLTIP: 'tooltip',
   INDEX_REL: 'indexRelationship',
   DETAIL_REL: 'detailRelationship',
-  SELECT_REL: 'selectRelationship'
+  SELECT_REL: 'selectRelationship',
+  SEARCH: 'search'
 }
 
 // begin conveyor util functions
@@ -91,6 +92,10 @@ const getType = ({ schema, modelName, fieldName }) => {
   return R.prop('type', field)
 }
 
+const getSearchable = (schema, modelName) => {
+  return R.propOr(false, 'searchable', getModel(schema, modelName))
+}
+
 // end conveyor util functions
 
 const isRel = field => {
@@ -112,6 +117,8 @@ const getQueryName = (schema, modelName, queryType) => {
     case QueryType.DETAIL:
     case QueryType.TOOLTIP:
       return model.queryName
+    case QueryType.SEARCH:
+      return 'search'
   }
 }
 
@@ -135,6 +142,8 @@ const getVariables = ({ modelName, queryType }) => {
       return detailVariables
     case QueryType.SELECT:
       return { sort: `[${getSortVariable(modelName)}!]` }
+    case QueryType.SEARCH:
+      return { queryString: 'String!' }
   }
 }
 
@@ -150,6 +159,8 @@ const getArgs = queryType => {
       return { id: new VariableType('id') }
     case QueryType.SELECT:
       return { sort: new VariableType('sort') }
+    case QueryType.SEARCH:
+      return { queryString: new VariableType('queryString') }
   }
 }
 
@@ -293,20 +304,79 @@ const buildFieldsObject = ({
   return fields
 }
 
+const buildSearchFieldsArray = schema => {
+  const fieldsArray = []
+  R.forEachObjIndexed(model => {
+    if (getSearchable(schema, model.modelName)) {
+      fieldsArray.push(buildSearchFieldsObject(schema, model))
+    }
+  }, schema)
+  return fieldsArray
+}
+
+const buildSearchFieldsObject = (schema, model) => {
+  const required = getRequiredFields(model)
+  const requiredObj = required.reduce(
+    (acc, val) => ({ ...acc, [val]: true }),
+    {}
+  )
+
+  let fields = {}
+  fields.id = true
+  if (R.type(model.displayField) === 'String') {
+    fields[model.displayField] = true
+  }
+
+  fields = R.mergeDeepLeft(requiredObj, fields)
+
+  fields.__typeName = model.modelName
+
+  fields = R.mapObjIndexed((val, key) => {
+    const field = getField(schema, model.modelName, key)
+    if (!isRel(field)) {
+      return val
+    }
+
+    return buildSearchFieldsObject(
+      schema,
+      getModel(schema, R.path(['type', 'target'], field))
+    )
+  }, fields)
+
+  return fields
+}
+
 export const makeQueryBuilder = schema => {
   return ({ modelName, queryType = QueryType.INDEX }) => {
     const queryName = getQueryName(schema, modelName, queryType)
     const queryVariables = getVariables({ modelName, queryType })
 
-    return {
-      query: {
-        __variables: queryVariables,
-        result: {
-          __aliasFor: queryName,
-          __args: getArgs(queryType),
-          ...buildFieldsObject({ schema, modelName, queryType })
+    switch (queryType) {
+      case QueryType.INDEX:
+      case QueryType.DETAIL:
+      case QueryType.SELECT:
+      case QueryType.TOOLTIP:
+        return {
+          query: {
+            __variables: queryVariables,
+            result: {
+              __aliasFor: queryName,
+              __args: getArgs(queryType),
+              ...buildFieldsObject({ schema, modelName, queryType })
+            }
+          }
         }
-      }
+      case QueryType.SEARCH:
+        return {
+          query: {
+            __variables: queryVariables,
+            search: {
+              __args: getArgs(queryType),
+              __typename: true,
+              __on: buildSearchFieldsArray(schema)
+            }
+          }
+        }
     }
   }
 }
