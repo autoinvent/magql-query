@@ -21,7 +21,11 @@ const QueryType = {
   INDEX_REL: 'indexRelationship',
   DETAIL_REL: 'detailRelationship',
   SELECT_REL: 'selectRelationship',
-  SEARCH: 'search'
+  SEARCH: 'search',
+  CREATE: 'create',
+  UPDATE: 'update',
+  DELETE: 'delete',
+  DELETE_CASCADES: 'deleteCascades'
 }
 
 // begin conveyor util functions
@@ -117,8 +121,12 @@ const getQueryName = (schema, modelName, queryType) => {
     case QueryType.DETAIL:
     case QueryType.TOOLTIP:
       return model.queryName
-    case QueryType.SEARCH:
-      return 'search'
+    case QueryType.CREATE:
+    case QueryType.UPDATE:
+    case QueryType.DELETE:
+      return R.path([modelName, 'queryName'], schema)
+    default:
+      return queryType
   }
 }
 
@@ -137,6 +145,7 @@ const getVariables = ({ modelName, queryType }) => {
   switch (queryType) {
     case QueryType.INDEX:
       return getListVariables(modelName)
+    case QueryType.DELETE:
     case QueryType.DETAIL:
     case QueryType.TOOLTIP:
       return detailVariables
@@ -144,6 +153,12 @@ const getVariables = ({ modelName, queryType }) => {
       return { sort: `[${getSortVariable(modelName)}!]` }
     case QueryType.SEARCH:
       return { queryString: 'String!' }
+    case QueryType.CREATE:
+      return { input: `${modelName}InputRequired!` }
+    case QueryType.UPDATE:
+      return { input: `${modelName}Input!`, id: 'Int!' }
+    case QueryType.DELETE_CASCADES:
+      return { modelName: 'String!', id: 'Int!' }
   }
 }
 
@@ -154,6 +169,7 @@ const getArgs = queryType => {
         filter: new VariableType('filter'),
         sort: new VariableType('sort')
       }
+    case QueryType.DELETE:
     case QueryType.DETAIL:
     case QueryType.TOOLTIP:
       return { id: new VariableType('id') }
@@ -161,6 +177,15 @@ const getArgs = queryType => {
       return { sort: new VariableType('sort') }
     case QueryType.SEARCH:
       return { queryString: new VariableType('queryString') }
+    case QueryType.CREATE:
+      return { input: new VariableType('input') }
+    case QueryType.UPDATE:
+      return { input: new VariableType('input'), id: new VariableType('id') }
+    case QueryType.DELETE_CASCADES:
+      return {
+        tableName: new VariableType('modelName'),
+        id: new VariableType('id')
+      }
   }
 }
 
@@ -346,6 +371,47 @@ const buildSearchFieldsObject = (schema, model) => {
   return fields
 }
 
+const buildDeleteCascadesArray = schema => {
+  const cascadesArray = []
+  R.forEachObjIndexed(model => {
+    cascadesArray.push(buildCascadesObject(schema, model))
+  }, schema)
+  return cascadesArray
+}
+
+const buildCascadesObject = (schema, model) => {
+  const required = getRequiredFields(model)
+  const requiredObj = required.reduce(
+    (acc, val) => ({ ...acc, [val]: true }),
+    {}
+  )
+
+  let cascades = {}
+  cascades.__typename = true
+  cascades.id = true
+  if (R.type(model.displayField) === 'String') {
+    cascades[model.displayField] = true
+  }
+
+  cascades = R.mergeDeepLeft(requiredObj, cascades)
+
+  cascades.__typeName = model.modelName
+
+  cascades = R.mapObjIndexed((val, key) => {
+    const field = getField(schema, model.modelName, key)
+    if (!isRel(field)) {
+      return val
+    }
+
+    return buildCascadesObject(
+      schema,
+      getModel(schema, R.path(['type', 'target'], field))
+    )
+  }, cascades)
+
+  return cascades
+}
+
 export const makeQueryBuilder = schema => {
   return ({ modelName, queryType = QueryType.INDEX }) => {
     const queryName = getQueryName(schema, modelName, queryType)
@@ -374,6 +440,32 @@ export const makeQueryBuilder = schema => {
               __args: getArgs(queryType),
               __typename: true,
               __on: buildSearchFieldsArray(schema)
+            }
+          }
+        }
+      case QueryType.CREATE:
+      case QueryType.UPDATE:
+      case QueryType.DELETE:
+        return {
+          mutation: {
+            __variables: queryVariables,
+            [`${queryType}${modelName}`]: {
+              __args: getArgs(queryType),
+              [`${queryName}`]: {
+                __typename: true,
+                id: true
+              },
+              errors: true
+            }
+          }
+        }
+      case QueryType.DELETE_CASCADES:
+        return {
+          query: {
+            __variables: queryVariables,
+            checkDelete: {
+              __args: getArgs(queryType),
+              __on: buildDeleteCascadesArray(schema)
             }
           }
         }
