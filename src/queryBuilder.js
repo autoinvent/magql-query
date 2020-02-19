@@ -447,8 +447,7 @@ export const makeQueryBuilder = schema => {
       case QueryType.UPDATE:
       case QueryType.DELETE:
         return {
-          [`mutation ${queryType.charAt(0).toUpperCase() +
-            queryType.slice(1)}${modelName}`]: {
+          mutation: {
             __variables: queryVariables,
             [`${queryType}${modelName}`]: {
               __args: getArgs(queryType),
@@ -462,7 +461,7 @@ export const makeQueryBuilder = schema => {
         }
       case QueryType.DELETE_CASCADES:
         return {
-          ['query Deletes']: {
+          query: {
             __variables: queryVariables,
             checkDelete: {
               __args: getArgs(queryType),
