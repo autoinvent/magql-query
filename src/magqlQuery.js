@@ -16,8 +16,8 @@ search
 
 export class MagqlQuery {
   constructor({ schema, url }) {
+    this.endpoint = url
     this.graphQLClient = new GraphQLClient(url)
-
     this.queryBuilder = makeQueryBuilder(schema)
   }
 
@@ -25,7 +25,18 @@ export class MagqlQuery {
     return jsonToGraphQLQuery(this.queryBuilder({ modelName, queryType }))
   }
 
-  sendRequest({ query, variables }) {
+  sendRequest({ query, variables, formData }) {
+    if (formData) {
+      const request = new Request(this.endpoint)
+      const init = {
+        method: 'POST',
+        body: formData
+      }
+      return fetch(request, init)
+        .then(data => ({ data, error: false }))
+        .catch(err => ({ data: null, error: err }))
+    }
+
     return this.graphQLClient
       .request(query, variables)
       .then(data => ({ data, error: false }))
