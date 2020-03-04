@@ -30,7 +30,6 @@ const QueryType = {
 
 // begin conveyor util functions
 
-
 const getField = (schema, modelName, fieldName) =>
   R.pipe(getFields, R.prop(fieldName))(schema, modelName)
 
