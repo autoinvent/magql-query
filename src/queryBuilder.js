@@ -175,6 +175,7 @@ const getRelFieldObject = ({ schema, modelName, fieldName }) => {
 }
 
 const buildTooltipFieldsObject = ({ schema, modelName }) => {
+  // todo: insert customProps from outside application
   const fields = schema.getTooltipFields({ modelName, customProps: {} })
   return R.pipe(
     R.reduce((accumulator, fieldName) => {
