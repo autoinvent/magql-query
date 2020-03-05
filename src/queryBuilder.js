@@ -28,84 +28,6 @@ const QueryType = {
   DELETE_CASCADES: 'deleteCascades'
 }
 
-// begin conveyor util functions
-
-const getField = (schema, modelName, fieldName) =>
-  R.pipe(getFields, R.prop(fieldName))(schema, modelName)
-
-const getFields = (schema, modelName) =>
-  getModelAttribute(schema, modelName, 'fields')
-
-const getModelAttribute = (schema, modelName, attributeName) =>
-  R.pipe(getModel, R.prop(attributeName))(schema, modelName)
-
-const getModel = (schema, modelName) => R.prop(modelName, schema)
-
-const getTooltipFields = (schema, modelName, customProps = null) => {
-  return getShownFields({ schema, modelName, type: 'showTooltip', customProps })
-}
-
-const getShownFields = ({
-  schema,
-  modelName,
-  type,
-  node,
-  data,
-  user,
-  customProps
-}) => {
-  const fieldOrder = R.prop('fieldOrder', getModel(schema, modelName))
-  return R.filter(fieldName => {
-    let show
-    switch (type) {
-      case 'showCreate':
-      case 'showDetail':
-        show = R.propOr(
-          !R.equals('id', fieldName),
-          type,
-          getField(schema, modelName, fieldName)
-        )
-        break
-      case 'showIndex':
-      case 'showTooltip':
-        show = R.propOr(false, type, getField(schema, modelName, fieldName))
-        break
-      default:
-        show = R.prop(type, getField(schema, modelName, fieldName))
-    }
-    if (R.type(show) === 'Function') {
-      show = show({
-        schema,
-        modelName,
-        fieldName,
-        node,
-        data,
-        user,
-        customProps
-      })
-    }
-    return show
-  }, fieldOrder)
-}
-
-const getType = ({ schema, modelName, fieldName }) => {
-  const field = getField(schema, modelName, fieldName)
-  if (isRel(field)) {
-    return R.path(['type', 'type'], field)
-  }
-  return R.prop('type', field)
-}
-
-const getSearchable = (schema, modelName) => {
-  return R.propOr(false, 'searchable', getModel(schema, modelName))
-}
-
-// end conveyor util functions
-
-const isRel = field => {
-  return typeof R.prop('type', field) === 'object'
-}
-
 const getRequiredFields = model =>
   R.union(['__typeName', 'id'], R.pathOr([], ['queryRequired'], model))
 
@@ -113,7 +35,7 @@ const getRelTableFields = ({ fieldName, model }) =>
   R.pathOr([], ['fields', fieldName, 'type', 'tableFields'], model)
 
 const getQueryName = (schema, modelName, queryType) => {
-  const model = getModel(schema, modelName)
+  const model = schema.getModel(modelName)
   switch (queryType) {
     case QueryType.INDEX:
     case QueryType.SELECT:
@@ -124,7 +46,7 @@ const getQueryName = (schema, modelName, queryType) => {
     case QueryType.CREATE:
     case QueryType.UPDATE:
     case QueryType.DELETE:
-      return R.path([modelName, 'queryName'], schema)
+      return R.prop('queryName', model)
     default:
       return queryType
   }
@@ -239,12 +161,12 @@ const getRelFieldObject = ({ schema, modelName, fieldName }) => {
   }
   const targetModel = R.path(
     ['type', 'target'],
-    getField(schema, modelName, fieldName)
+    schema.getField(modelName, fieldName)
   )
   const targetModelDisplayField = R.propOr(
     'name',
     'displayField',
-    getModel(schema, targetModel)
+    schema.getModel(targetModel)
   )
   if (targetModelDisplayField) {
     relFieldObjet[targetModelDisplayField] = true
@@ -253,10 +175,10 @@ const getRelFieldObject = ({ schema, modelName, fieldName }) => {
 }
 
 const buildTooltipFieldsObject = ({ schema, modelName }) => {
-  const fields = getTooltipFields(schema, modelName)
+  const fields = schema.getTooltipFields({ modelName, customProps: {} })
   return R.pipe(
     R.reduce((accumulator, fieldName) => {
-      const type = getType({ schema, modelName, fieldName })
+      const type = schema.getType(modelName, fieldName)
       if (type.includes('ToMany')) {
         return R.assoc(
           fieldName,
@@ -287,7 +209,7 @@ const buildFieldsObject = ({
   modelName,
   queryFields = []
 }) => {
-  const model = getModel(schema, modelName)
+  const model = schema.getModel(modelName)
   const required = getRequiredFields(model)
   const requiredObj = required.reduce(
     (acc, val) => ({ ...acc, [val]: true }),
@@ -313,8 +235,8 @@ const buildFieldsObject = ({
   fields = R.mergeDeepLeft(requiredObj, fields)
   // replace with query object when fieldName is Relationship type
   fields = R.mapObjIndexed((val, key) => {
-    const field = getField(schema, modelName, key)
-    if (!isRel(field)) {
+    const field = schema.getField(modelName, key)
+    if (!schema.isRel(modelName, key)) {
       return val
     }
 
@@ -332,10 +254,10 @@ const buildFieldsObject = ({
 const buildSearchFieldsArray = schema => {
   const fieldsArray = []
   R.forEachObjIndexed(model => {
-    if (getSearchable(schema, model.modelName)) {
+    if (schema.getSearchable(model.modelName)) {
       fieldsArray.push(buildSearchFieldsObject(schema, model))
     }
-  }, schema)
+  }, schema.schemaJSON)
   return fieldsArray
 }
 
@@ -357,14 +279,14 @@ const buildSearchFieldsObject = (schema, model) => {
   fields.__typeName = model.modelName
 
   fields = R.mapObjIndexed((val, key) => {
-    const field = getField(schema, model.modelName, key)
-    if (!isRel(field)) {
+    const field = schema.getField(model.modelName, key)
+    if (!schema.isRel(model.modelName, key)) {
       return val
     }
 
     return buildSearchFieldsObject(
       schema,
-      getModel(schema, R.path(['type', 'target'], field))
+      schema.getModel(R.path(['type', 'target'], field))
     )
   }, fields)
 
@@ -375,7 +297,7 @@ const buildDeleteCascadesArray = schema => {
   const cascadesArray = []
   R.forEachObjIndexed(model => {
     cascadesArray.push(buildCascadesObject(schema, model))
-  }, schema)
+  }, schema.schemaJSON)
   return cascadesArray
 }
 
@@ -398,14 +320,14 @@ const buildCascadesObject = (schema, model) => {
   cascades.__typeName = model.modelName
 
   cascades = R.mapObjIndexed((val, key) => {
-    const field = getField(schema, model.modelName, key)
-    if (!isRel(field)) {
+    const field = schema.getField(model.modelName, key)
+    if (!schema.isRel(model.modelName, key)) {
       return val
     }
 
     return buildCascadesObject(
       schema,
-      getModel(schema, R.path(['type', 'target'], field))
+      schema.getModel(R.path(['type', 'target'], field))
     )
   }, cascades)
 
