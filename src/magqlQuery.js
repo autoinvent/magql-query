@@ -1,7 +1,6 @@
 import { makeQueryBuilder } from './queryBuilder'
 import { jsonToGraphQLQuery } from 'json-to-graphql-query'
 import { GraphQLClient } from 'graphql-request'
-import { SchemaBuilder } from '@autoinvent/conveyor-schema'
 
 /*
 create
@@ -17,14 +16,6 @@ search
 
 export class MagqlQuery {
   constructor({ schema, url }) {
-
-    // this is temporary. take away once 'MagqlQuery' class guaranteed to
-    // receive the schema prop as a 'SchemaBuilder' type, not JSON type
-    // once done, can uninstall conveyor-schema from package.json
-    if (!('schemaJSON' in schema)) {
-      schema = new SchemaBuilder(schema)
-    }
-
     this.endpoint = url
     this.graphQLClient = new GraphQLClient(url)
     this.queryBuilder = makeQueryBuilder(schema)
