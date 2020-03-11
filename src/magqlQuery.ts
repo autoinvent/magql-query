@@ -30,7 +30,7 @@ export class MagqlQuery {
     modelName,
     queryType
   }: {
-    modelName: string
+    modelName?: string
     queryType: QueryType
   }) {
     return jsonToGraphQLQuery(this.queryBuilder({ modelName, queryType }))
