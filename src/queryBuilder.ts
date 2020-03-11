@@ -145,11 +145,27 @@ const getFieldQueryType = (queryType: QueryType) => {
 }
 
 const getQueryIndexFields = (schema: any, modelName: string) => {
-  return schema.getIndexFields({ modelName, customProps: {} })
+  const indexFields = schema.getIndexFields({ modelName, customProps: {} })
+  const fields = R.pipe(
+    R.prop<string, any>('fields'),
+    R.map(
+      (field: any) =>
+        R.includes(R.prop('fieldName', field), indexFields) ||
+        R.prop('queryIndex', field)
+    )
+  )(schema.getModel(modelName))
+  return R.filter(R.identity, fields)
 }
 
 const getQueryDetailFields = (schema: any, modelName: any) => {
-  return schema.getDetailFields({ modelName, customProps: {} })
+  const detailFields = schema.getDetailFields({ modelName, customProps: {} })
+  const fields = R.filter(
+    (field: any) =>
+      R.includes(R.prop('fieldName', field), detailFields) ||
+      R.prop('queryDetail', field),
+    R.prop('fields', schema.getModel(modelName))
+  )
+  return R.filter(R.identity, fields)
 }
 
 // needs to be removed?
