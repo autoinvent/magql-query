@@ -144,31 +144,30 @@ const getFieldQueryType = (queryType: QueryType) => {
   }
 }
 
-const getQueryIndexFields = (model: any) => {
+const getQueryIndexFields = (schema: any, modelName: string) => {
+  const indexFields = schema.getIndexFields({ modelName, customProps: {} })
   const fields = R.pipe(
     R.prop<string, any>('fields'),
     R.map(
-      (field: any) => R.prop('showIndex', field) || R.prop('queryIndex', field)
+      (field: any) =>
+        R.includes(R.prop('fieldName', field), indexFields) ||
+        R.prop('queryIndex', field)
     )
-  )(model)
+  )(schema.getModel(modelName))
   return R.filter(R.identity, fields)
 }
 
-const getQueryDetailFields = (model: any) => {
-  // fieldName => (true if field.showDetail | false) if non-relationship | Relationship.type
+const getQueryDetailFields = (schema: any, modelName: any) => {
+  const detailFields = schema.getDetailFields({ modelName, customProps: {} })
   const fields = R.filter(
     (field: any) =>
-      R.propOr(true, 'showDetail', field) || R.prop('queryDetail', field),
-    R.prop('fields', model)
+      R.includes(R.prop('fieldName', field), detailFields) ||
+      R.prop('queryDetail', field),
+    schema.getFields(modelName)
   )
-  return R.mapObjIndexed((val, key) => {
-    // Assume showDetail is true because conveyor assumes it is true
-    const show =
-      R.pathOr(true, ['fields', key, 'showDetail'], model) ||
-      R.path(['fields', key, 'queryDetail'], model)
-
-    return R.pathOr(show, ['fields', key, 'type', 'type'], model)
-  }, fields)
+  return R.mapObjIndexed((val, key) => (
+    R.pathOr(true, ['fields', key, 'type', 'type'], schema.getModel(modelName))
+  ), fields)
 }
 
 // needs to be removed?
@@ -265,11 +264,11 @@ const buildFieldsObject = ({
   let fields = ((): object => {
     switch (queryType) {
       case QueryType.INDEX:
-        return getQueryIndexFields(model)
+        return getQueryIndexFields(schema, modelName)
       case QueryType.DETAIL:
-        return getQueryDetailFields(model)
+        return getQueryDetailFields(schema, modelName)
       case QueryType.DETAIL_REL:
-        return pickFields(queryFields, getQueryDetailFields(model))
+        return pickFields(queryFields, getQueryDetailFields(schema, modelName))
       default:
         return {}
     }
