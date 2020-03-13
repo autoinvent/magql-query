@@ -27,6 +27,7 @@ jobs:
 
     steps:
       - uses: actions/checkout@v2
-      - uses: stefanoeb/eslint-action@1.0.2
-        with:
-          files: src/
+      - name: Install dependencies
+        run: yarn
+      - name: Lint
+        run: yarn eslint 'src/**/*.ts'

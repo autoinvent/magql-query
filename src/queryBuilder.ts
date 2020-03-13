@@ -165,9 +165,15 @@ const getQueryDetailFields = (schema: any, modelName: any) => {
       R.prop('queryDetail', field),
     schema.getFields(modelName)
   )
-  return R.mapObjIndexed((val, key) => (
-    R.pathOr(true, ['fields', key, 'type', 'type'], schema.getModel(modelName))
-  ), fields)
+  return R.mapObjIndexed(
+    (val, key) =>
+      R.pathOr(
+        true,
+        ['fields', key, 'type', 'type'],
+        schema.getModel(modelName)
+      ),
+    fields
+  )
 }
 
 // needs to be removed?
