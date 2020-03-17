@@ -58,7 +58,7 @@ export class MagqlQuery {
 
     return this.graphQLClient
       .request(query, variables)
-      .then(data => ({ data, error: false }))
+      .then(data => ({ data: Object.values(data)[0], error: false }))
       .catch(err => ({ data: null, error: err }))
   }
 

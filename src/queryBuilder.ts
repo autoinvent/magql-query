@@ -60,7 +60,7 @@ const getQueryName = (
     case QueryType.CREATE:
     case QueryType.UPDATE:
     case QueryType.DELETE:
-      return R.prop('queryName', model)
+      return model.queryName
     default:
       return queryType
   }
@@ -400,10 +400,12 @@ export const makeQueryBuilder = (schema: SchemaBuilder) => {
         return {
           query: {
             __variables: queryVariables,
-            result: {
-              __aliasFor: queryName,
+            [queryName]: {
               __args: getArgs(queryType),
-              ...buildFieldsObject({ schema, modelName, queryType })
+              result: {
+                ...buildFieldsObject({ schema, modelName, queryType })
+              },
+              errors: true
             }
           }
         }
@@ -426,7 +428,7 @@ export const makeQueryBuilder = (schema: SchemaBuilder) => {
             __variables: queryVariables,
             [`${queryType}${modelName}`]: {
               __args: getArgs(queryType),
-              [`${queryName}`]: {
+              result: {
                 __typename: true,
                 id: true
               },
