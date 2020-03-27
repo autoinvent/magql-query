@@ -70,7 +70,8 @@ const getSortVariable = (modelName: string) => `${modelName}Sort`
 
 const getListVariables = (modelName: string) => ({
   filter: `${modelName}Filter`,
-  sort: `[${getSortVariable(modelName)}!]`
+  sort: `[${getSortVariable(modelName)}!]`,
+  page: 'Page'
 })
 
 const detailVariables = {
@@ -109,7 +110,8 @@ const getArgs = (queryType: QueryType) => {
     case QueryType.INDEX:
       return {
         filter: new VariableType('filter'),
-        sort: new VariableType('sort')
+        sort: new VariableType('sort'),
+        page: new VariableType('page')
       }
     case QueryType.DELETE:
     case QueryType.DETAIL:
@@ -405,7 +407,8 @@ export const makeQueryBuilder = (schema: SchemaBuilder) => {
               result: {
                 ...buildFieldsObject({ schema, modelName, queryType })
               },
-              errors: true
+              errors: true,
+              count: queryType === QueryType.INDEX
             }
           }
         }
