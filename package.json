@@ -1,6 +1,6 @@
 {
   "name": "@autoinvent/magql-query",
-  "version": "1.0.0",
+  "version": "0.1.0",
   "description": "Query builder for communicating with magql backend.",
   "main": "lib/index.js",
   "types": "lib/index.d.ts",
