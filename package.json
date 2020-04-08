@@ -1,10 +1,12 @@
 {
-  "name": "magql-query",
-  "version": "0.1.0",
+  "name": "@autoinvent/magql-query",
+  "version": "1.0.0",
   "description": "Query builder for communicating with magql backend.",
+  "main": "lib/index.js",
+  "types": "lib/index.d.ts",
+  "repository": "github:autoinvent/magql-query",
   "author": "Moebius Solutions",
   "license": "BSD-3-Clause",
-  "main": "lib/index.js",
   "scripts": {
     "build": "yarn run build:types && yarn run build:js",
     "build:types": "tsc --emitDeclarationOnly",

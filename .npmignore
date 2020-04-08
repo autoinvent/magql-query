@@ -1,8 +1,13 @@
-/.idea/
+/src
+/.idea
+/.DS_Store
+/docs
 /.vscode/
 /yarn.lock
 /.yarn-error.log
-/src/
 .eslintrc.js
+/.babelrc
 build.sh
 /*.tgz
+yalc.lock
+/.yalc
