@@ -14,13 +14,13 @@
   },
   "devDependencies": {
     "@autoinvent/conveyor-schema": "^0.1.0",
-    "@babel/cli": "^7.8.3",
-    "@babel/core": "^7.8.3",
-    "@babel/plugin-proposal-class-properties": "^7.8.3",
-    "@babel/plugin-proposal-object-rest-spread": "^7.8.3",
-    "@babel/plugin-transform-runtime": "^7.8.3",
-    "@babel/preset-env": "^7.8.3",
-    "@babel/preset-typescript": "^7.8.3",
+    "@babel/cli": "^7.11.6",
+    "@babel/core": "^7.11.6",
+    "@babel/plugin-proposal-class-properties": "^7.10.4",
+    "@babel/plugin-proposal-object-rest-spread": "^7.11.0",
+    "@babel/plugin-transform-runtime": "^7.11.5",
+    "@babel/preset-env": "^7.11.5",
+    "@babel/preset-typescript": "^7.10.4",
     "@types/ramda": "^0.26.43",
     "@typescript-eslint/eslint-plugin": "^2.23.0",
     "@typescript-eslint/parser": "^2.23.0",
@@ -32,8 +32,8 @@
     "typescript": "^3.8.3"
   },
   "dependencies": {
-    "@babel/runtime-corejs3": "^7.8.7",
-    "core-js": "^3.6.4",
+    "@babel/runtime-corejs3": "^7.11.2",
+    "core-js": "^3.6.5",
     "graphql-request": "^1.8.2",
     "json-to-graphql-query": "^1.9.0",
     "ramda": "^0.26.1"
