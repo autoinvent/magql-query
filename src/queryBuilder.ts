@@ -161,22 +161,18 @@ const getQueryIndexFields = (schema: any, modelName: string) => {
 
 const getQueryDetailFields = (schema: any, modelName: any) => {
   const fields = R.filter(
-    (field: any) => ((R.propOr(true, 'showDetail', field) || R.prop('queryDetail', field)) && !R.prop('virtualField', field)),
+    (field: any) =>
+      (R.propOr(true, 'showDetail', field) || R.prop('queryDetail', field)) &&
+      !R.prop('virtualField', field),
     schema.getFields(modelName)
   )
   const model = schema.getModel(modelName)
-  return R.mapObjIndexed(
-    (val, key) => {
-      const show = R.pathOr(true, ['fields', key, 'showDetail'], model) ||
-        R.path(['fields', key, 'queryDetail'], model)
-      return R.pathOr(
-        show,
-        ['fields', key, 'type', 'type'],
-        model
-      )
-    },
-    fields
-  )
+  return R.mapObjIndexed((val, key) => {
+    const show =
+      R.pathOr(true, ['fields', key, 'showDetail'], model) ||
+      R.path(['fields', key, 'queryDetail'], model)
+    return R.pathOr(show, ['fields', key, 'type', 'type'], model)
+  }, fields)
 }
 // needs to be removed?
 const makeRelayNodeConnection = (nodeQueryObj: any) => ({
