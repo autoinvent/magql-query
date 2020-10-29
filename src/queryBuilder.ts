@@ -163,8 +163,9 @@ const getQueryDetailFields = (schema: any, modelName: any) => {
   const detailFields = schema.getDetailFields({ modelName, customProps: {} })
   const fields = R.filter(
     (field: any) =>
-      R.includes(R.prop('fieldName', field), detailFields) ||
-      R.prop('queryDetail', field),
+      (R.includes(R.prop('fieldName', field), detailFields) ||
+        R.prop('queryDetail', field)) &&
+      !R.prop('virtualField', field),
     schema.getFields(modelName)
   )
   return R.mapObjIndexed(
