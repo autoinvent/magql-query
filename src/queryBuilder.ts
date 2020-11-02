@@ -219,7 +219,7 @@ const buildTooltipFieldsObject = ({
   return R.pipe(
     R.reduce((accumulator, fieldName: string) => {
       const type = schema.getType(modelName, fieldName)
-      if (type.includes('ToMany')) {
+      if (type && type.includes('ToMany')) {
         return R.assoc(
           fieldName,
           makeRelayNodeConnection(
@@ -227,7 +227,7 @@ const buildTooltipFieldsObject = ({
           ),
           accumulator
         )
-      } else if (type.includes('ToOne')) {
+      } else if (type && type.includes('ToOne')) {
         return R.assoc(
           fieldName,
           getRelFieldObject({ schema, modelName, fieldName }),
