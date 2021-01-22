@@ -75,7 +75,7 @@ const getListVariables = (modelName: string) => ({
 })
 
 const detailVariables = {
-  id: 'Int!'
+  id: 'ID!'
 }
 
 const getVariables = ({
@@ -99,9 +99,9 @@ const getVariables = ({
     case QueryType.CREATE:
       return { input: `${modelName}InputRequired!` }
     case QueryType.UPDATE:
-      return { input: `${modelName}Input!`, id: 'Int!' }
+      return { input: `${modelName}Input!`, id: 'ID!' }
     case QueryType.DELETE_CASCADES:
-      return { modelName: 'String!', id: 'Int!' }
+      return { modelName: 'String!', id: 'ID!' }
   }
 }
 

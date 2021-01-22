@@ -10,7 +10,7 @@ First, test package in autoinvent_example repo:
 
 1.) build /lib files with your new changes in magql-query repo;
 
-    npm run build
+    yarn run build
     
 2.) run in magql-query repo
 
