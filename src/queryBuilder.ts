@@ -341,7 +341,8 @@ const buildSearchFieldsObject = (schema: SchemaBuilder, model: any) => {
 const buildDeleteCascadesArray = (schema: SchemaBuilder) => {
   const cascadesArray: object[] = []
   R.forEachObjIndexed(model => {
-    cascadesArray.push(buildCascadesObject(schema, model))
+    if (!R.propEq('showDeleteModal', false, model))
+      cascadesArray.push(buildCascadesObject(schema, model))
   }, schema.schemaJSON)
   return cascadesArray
 }
