@@ -187,7 +187,8 @@ const getQueryDetailFields = (
 ): object => {
   const fields = R.filter(
     (field: Field) =>
-      (R.propOr(true, 'showDetail', field) || R.prop('queryDetail', field)) as boolean &&
+      ((R.propOr(true, 'showDetail', field) ||
+        R.prop('queryDetail', field)) as boolean) &&
       !R.prop('virtualField', field),
     schema.getFields(modelName)
   )
