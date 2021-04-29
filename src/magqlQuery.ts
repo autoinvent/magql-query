@@ -18,7 +18,7 @@ search
 export class MagqlQuery {
   endpoint: string
   graphQLClient: GraphQLClient
-  queryBuilder: any
+  queryBuilder: Function
 
   constructor({ schema, url }: { schema: SchemaBuilder; url: string }) {
     this.endpoint = url
@@ -32,7 +32,7 @@ export class MagqlQuery {
   }: {
     modelName?: string
     queryType: QueryType
-  }) {
+  }): string {
     return jsonToGraphQLQuery(this.queryBuilder({ modelName, queryType }))
   }
 
@@ -43,8 +43,8 @@ export class MagqlQuery {
   }: {
     query: string
     variables: object
-    formData?: any
-  }) {
+    formData?: string
+  }): object {
     if (formData) {
       const request = new Request(this.endpoint)
       const init = {
@@ -70,7 +70,7 @@ export class MagqlQuery {
     modelName: string
     variables: object
     queryType: QueryType
-  }) {
+  }): object {
     const query = this.buildQuery({ modelName, queryType })
 
     return this.sendRequest({ query, variables })
