@@ -28,12 +28,21 @@ export class MagqlQuery {
 
   buildQuery({
     modelName,
+    fieldName,
     queryType
   }: {
     modelName?: string
+    fieldName?: string
     queryType: QueryType
   }) {
-    return jsonToGraphQLQuery(this.queryBuilder({ modelName, queryType }))
+    const result = this.queryBuilder({ modelName, fieldName, queryType })
+    if (typeof result === 'string') {
+      return this.queryBuilder({ modelName, fieldName, queryType })
+    } else {
+      return jsonToGraphQLQuery(
+        this.queryBuilder({ modelName, fieldName, queryType })
+      )
+    }
   }
 
   sendRequest({
