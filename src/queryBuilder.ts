@@ -26,7 +26,8 @@ export enum QueryType {
   CREATE = 'create',
   UPDATE = 'update',
   DELETE = 'delete',
-  DELETE_CASCADES = 'deleteCascades'
+  DELETE_CASCADES = 'deleteCascades',
+  SELECT_EXISTING_FIELDS = 'selectExistingFields'
 }
 
 interface QueryObject {
@@ -380,12 +381,24 @@ const buildCascadesObject = (schema: SchemaBuilder, model: any) => {
   return cascades
 }
 
+const generatePrepopulatedQuery = ({
+  modelName,
+  fieldName
+}: {
+  fieldName: string
+  modelName: string
+}) => `{
+  result: existingFieldValues(modelName: "${modelName}", fieldName: "${fieldName}")
+}`
+
 export const makeQueryBuilder = (schema: SchemaBuilder) => {
   return ({
     modelName,
+    fieldName,
     queryType = QueryType.INDEX
   }: {
     modelName: string
+    fieldName: string
     queryType: QueryType
   }) => {
     const queryName = getQueryName(schema, modelName, queryType)
@@ -446,6 +459,8 @@ export const makeQueryBuilder = (schema: SchemaBuilder) => {
             }
           }
         }
+      case QueryType.SELECT_EXISTING_FIELDS:
+        return generatePrepopulatedQuery({ modelName, fieldName })
     }
   }
 }
