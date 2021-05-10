@@ -30,11 +30,25 @@ export enum QueryType {
   SELECT_EXISTING_FIELDS = 'selectExistingFields'
 }
 
-interface QueryObject {
-  [k: string]: true | QueryObject
+interface Model {
+  queryName: string
+  queryAllName: string
+  modelName: string
+  displayField: string
 }
 
-const getRequiredFields = (model: any) =>
+interface Field {
+  queryDetail: boolean
+  virtualField: boolean
+  fieldName: string
+  queryIndex: boolean
+}
+
+interface QueryObject {
+  [k: string]: string | boolean | QueryObject
+}
+
+const getRequiredFields = (model: Model): string[] =>
   R.union(['__typeName', 'id'], R.pathOr([], ['queryRequired'], model))
 
 const getRelTableFields = ({
@@ -42,15 +56,15 @@ const getRelTableFields = ({
   model
 }: {
   fieldName: string
-  model: any
-}) => R.pathOr([], ['fields', fieldName, 'type', 'tableFields'], model)
+  model: Model
+}): [] => R.pathOr([], ['fields', fieldName, 'type', 'tableFields'], model)
 
 const getQueryName = (
   schema: SchemaBuilder,
   modelName: string,
   queryType: QueryType
-) => {
-  const model: any = schema.getModel(modelName)
+): string => {
+  const model: Model = schema.getModel(modelName) as Model
   switch (queryType) {
     case QueryType.INDEX:
     case QueryType.SELECT:
@@ -67,9 +81,9 @@ const getQueryName = (
   }
 }
 
-const getSortVariable = (modelName: string) => `${modelName}Sort`
+const getSortVariable = (modelName: string): string => `${modelName}Sort`
 
-const getListVariables = (modelName: string) => ({
+const getListVariables = (modelName: string): object => ({
   filter: `${modelName}Filter`,
   sort: `[${getSortVariable(modelName)}!]`,
   page: 'Page'
@@ -85,7 +99,7 @@ const getVariables = ({
 }: {
   modelName: string
   queryType: QueryType
-}) => {
+}): object => {
   switch (queryType) {
     case QueryType.INDEX:
       return getListVariables(modelName)
@@ -103,10 +117,12 @@ const getVariables = ({
       return { input: `${modelName}Input!`, id: 'ID!' }
     case QueryType.DELETE_CASCADES:
       return { modelName: 'String!', id: 'ID!' }
+    default:
+      return { queryType: 'defaultQueryType' }
   }
 }
 
-const getArgs = (queryType: QueryType) => {
+const getArgs = (queryType: QueryType): object => {
   switch (queryType) {
     case QueryType.INDEX:
       return {
@@ -131,10 +147,12 @@ const getArgs = (queryType: QueryType) => {
         tableName: new VariableType('modelName'),
         id: new VariableType('id')
       }
+    default:
+      return { queryType: 'defaultQueryType' }
   }
 }
 
-const getFieldQueryType = (queryType: QueryType) => {
+const getFieldQueryType = (queryType: QueryType): QueryType => {
   switch (queryType) {
     case QueryType.INDEX:
       return QueryType.INDEX_REL
@@ -147,23 +165,31 @@ const getFieldQueryType = (queryType: QueryType) => {
   }
 }
 
-const getQueryIndexFields = (schema: any, modelName: string) => {
+const getQueryIndexFields = (
+  schema: SchemaBuilder,
+  modelName: string
+): object => {
   const indexFields = schema.getIndexFields({ modelName, customProps: {} })
   const fields = R.pipe(
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     R.prop<string, any>('fields'),
     R.map(
-      (field: any) =>
+      (field: Field) =>
         R.includes(R.prop('fieldName', field), indexFields) ||
         R.prop('queryIndex', field)
     )
-  )(schema.getModel(modelName))
+  )(schema.getModel(modelName) as Model)
   return R.filter(R.identity, fields)
 }
 
-const getQueryDetailFields = (schema: any, modelName: any) => {
+const getQueryDetailFields = (
+  schema: SchemaBuilder,
+  modelName: string
+): object => {
   const fields = R.filter(
-    (field: any) =>
-      (R.propOr(true, 'showDetail', field) || R.prop('queryDetail', field)) &&
+    (field: Field) =>
+      ((R.propOr(true, 'showDetail', field) ||
+        R.prop('queryDetail', field)) as boolean) &&
       !R.prop('virtualField', field),
     schema.getFields(modelName)
   )
@@ -176,7 +202,7 @@ const getQueryDetailFields = (schema: any, modelName: any) => {
   }, fields)
 }
 // needs to be removed?
-const makeRelayNodeConnection = (nodeQueryObj: any) => ({
+const makeRelayNodeConnection = (nodeQueryObj: object): object => ({
   __typename: true,
   ...nodeQueryObj
 })
@@ -189,7 +215,7 @@ const getRelFieldObject = ({
   schema: SchemaBuilder
   modelName: string
   fieldName: string
-}) => {
+}): object => {
   const relFieldObject: QueryObject = {
     id: true
   }
@@ -214,7 +240,7 @@ const buildTooltipFieldsObject = ({
 }: {
   schema: SchemaBuilder
   modelName: string
-}) => {
+}): object => {
   // todo: insert customProps from outside application
   const fields = schema.getTooltipFields({ modelName, customProps: {} })
   return R.pipe(
@@ -241,7 +267,7 @@ const buildTooltipFieldsObject = ({
   )(fields)
 }
 
-const pickFields = (arr: string[], fields: any): object =>
+const pickFields = (arr: string[], fields: object): object =>
   R.pickBy((val, key) => R.includes(key, arr), fields)
 
 const buildFieldsObject = ({
@@ -254,8 +280,8 @@ const buildFieldsObject = ({
   queryType: QueryType
   modelName: string
   queryFields?: string[]
-}) => {
-  const model = schema.getModel(modelName)
+}): object => {
+  const model = schema.getModel(modelName) as Model
   const required = getRequiredFields(model)
   const requiredObj = required.reduce(
     (acc, val) => ({ ...acc, [val]: true }),
@@ -297,17 +323,10 @@ const buildFieldsObject = ({
   return fields
 }
 
-const buildSearchFieldsArray = (schema: SchemaBuilder) => {
-  const fieldsArray: object[] = []
-  R.forEachObjIndexed(model => {
-    if (schema.getSearchable(model.modelName)) {
-      fieldsArray.push(buildSearchFieldsObject(schema, model))
-    }
-  }, schema.schemaJSON)
-  return fieldsArray
-}
-
-const buildSearchFieldsObject = (schema: SchemaBuilder, model: any) => {
+const buildSearchFieldsObject = (
+  schema: SchemaBuilder,
+  model: Model
+): QueryObject => {
   const required = getRequiredFields(model)
   const requiredObj = required.reduce(
     (acc, val) => ({ ...acc, [val]: true }),
@@ -332,23 +351,27 @@ const buildSearchFieldsObject = (schema: SchemaBuilder, model: any) => {
 
     return buildSearchFieldsObject(
       schema,
-      schema.getModel(R.path(['type', 'target'], field) as string)
+      schema.getModel(R.path(['type', 'target'], field) as string) as Model
     )
   }, fields)
 
   return fields
 }
 
-const buildDeleteCascadesArray = (schema: SchemaBuilder) => {
-  const cascadesArray: object[] = []
+const buildSearchFieldsArray = (schema: SchemaBuilder): object[] => {
+  const fieldsArray: object[] = []
   R.forEachObjIndexed(model => {
-    if (!R.propEq('showDeleteModal', false, model))
-      cascadesArray.push(buildCascadesObject(schema, model))
+    if (schema.getSearchable(model.modelName)) {
+      fieldsArray.push(buildSearchFieldsObject(schema, model))
+    }
   }, schema.schemaJSON)
-  return cascadesArray
+  return fieldsArray
 }
 
-const buildCascadesObject = (schema: SchemaBuilder, model: any) => {
+const buildCascadesObject = (
+  schema: SchemaBuilder,
+  model: Model
+): QueryObject => {
   const required = getRequiredFields(model)
   const requiredObj = required.reduce(
     (acc, val) => ({ ...acc, [val]: true }),
@@ -374,11 +397,20 @@ const buildCascadesObject = (schema: SchemaBuilder, model: any) => {
 
     return buildCascadesObject(
       schema,
-      schema.getModel(R.path(['type', 'target'], field) as string)
+      schema.getModel(R.path(['type', 'target'], field) as string) as Model
     )
   }, cascades)
 
   return cascades
+}
+
+const buildDeleteCascadesArray = (schema: SchemaBuilder): object[] => {
+  const cascadesArray: object[] = []
+  R.forEachObjIndexed(model => {
+    if (!R.propEq('showDeleteModal', false, model))
+      cascadesArray.push(buildCascadesObject(schema, model))
+  }, schema.schemaJSON)
+  return cascadesArray
 }
 
 const generatePrepopulatedQuery = ({
@@ -387,7 +419,7 @@ const generatePrepopulatedQuery = ({
 }: {
   fieldName: string
   modelName: string
-}) => `{
+}): string => `{
   result: existingFieldValues(modelName: "${modelName}", fieldName: "${fieldName}")
 }`
 
@@ -400,7 +432,7 @@ export const makeQueryBuilder = (schema: SchemaBuilder) => {
     modelName: string
     fieldName: string
     queryType: QueryType
-  }) => {
+  }): object | string => {
     const queryName = getQueryName(schema, modelName, queryType)
     const queryVariables = getVariables({ modelName, queryType })
 
@@ -461,6 +493,8 @@ export const makeQueryBuilder = (schema: SchemaBuilder) => {
         }
       case QueryType.SELECT_EXISTING_FIELDS:
         return generatePrepopulatedQuery({ modelName, fieldName })
+      default:
+        return { queryType: 'defaultQueryType' }
     }
   }
 }
