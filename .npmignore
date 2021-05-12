@@ -1,6 +1,6 @@
 src
 .idea
-.vscode/
+.vscode
 .eslintrc.js
 *.tgz
 yalc.lock
@@ -10,3 +10,4 @@ yarn.lock
 yarn-error.log
 tsconfig.json
 prettier.config.js
+docs

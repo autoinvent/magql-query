@@ -1,6 +1,11 @@
 import * as R from 'ramda'
 import { VariableType } from 'json-to-graphql-query'
 import { SchemaBuilder } from '@autoinvent/conveyor-schema'
+import {
+  Field,
+  FieldTypeObject,
+  Schema
+} from '@autoinvent/conveyor-schema/lib/schemaJson'
 
 /*
 create
@@ -30,25 +35,11 @@ export enum QueryType {
   SELECT_EXISTING_FIELDS = 'selectExistingFields'
 }
 
-interface Model {
-  queryName: string
-  queryAllName: string
-  modelName: string
-  displayField: string
-}
-
-interface Field {
-  queryDetail: boolean
-  virtualField: boolean
-  fieldName: string
-  queryIndex: boolean
-}
-
 interface QueryObject {
   [k: string]: string | boolean | QueryObject
 }
 
-const getRequiredFields = (model: Model): string[] =>
+const getRequiredFields = (model: Schema): string[] =>
   R.union(['__typeName', 'id'], R.pathOr([], ['queryRequired'], model))
 
 const getRelTableFields = ({
@@ -56,15 +47,18 @@ const getRelTableFields = ({
   model
 }: {
   fieldName: string
-  model: Model
-}): [] => R.pathOr([], ['fields', fieldName, 'type', 'tableFields'], model)
+  model: Schema
+}): string[] => {
+  const fieldType = model.fields?.[fieldName]?.type as FieldTypeObject
+  return fieldType?.tableFields ?? []
+}
 
 const getQueryName = (
   schema: SchemaBuilder,
   modelName: string,
   queryType: QueryType
-): string => {
-  const model: Model = schema.getModel(modelName) as Model
+): string | undefined => {
+  const model = schema.getModel(modelName)
   switch (queryType) {
     case QueryType.INDEX:
     case QueryType.SELECT:
@@ -169,7 +163,10 @@ const getQueryIndexFields = (
   schema: SchemaBuilder,
   modelName: string
 ): object => {
-  const indexFields = schema.getIndexFields({ modelName, customProps: {} })
+  const indexFields: string[] = schema.getIndexFields({
+    modelName,
+    customProps: {}
+  })
   const fields = R.pipe(
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     R.prop<string, any>('fields'),
@@ -178,7 +175,7 @@ const getQueryIndexFields = (
         R.includes(R.prop('fieldName', field), indexFields) ||
         R.prop('queryIndex', field)
     )
-  )(schema.getModel(modelName) as Model)
+  )(schema.getModel(modelName)) as boolean[]
   return R.filter(R.identity, fields)
 }
 
@@ -242,10 +239,13 @@ const buildTooltipFieldsObject = ({
   modelName: string
 }): object => {
   // todo: insert customProps from outside application
-  const fields = schema.getTooltipFields({ modelName, customProps: {} })
+  const fields = schema.getTooltipFields({
+    modelName,
+    customProps: {}
+  }) as string[]
   return R.pipe(
     R.reduce((accumulator, fieldName: string) => {
-      const type = schema.getType(modelName, fieldName)
+      const type = schema.getType(modelName, fieldName) as string
       if (type && type.includes('ToMany')) {
         return R.assoc(
           fieldName,
@@ -268,7 +268,7 @@ const buildTooltipFieldsObject = ({
 }
 
 const pickFields = (arr: string[], fields: object): object =>
-  R.pickBy((val, key) => R.includes(key, arr), fields)
+  R.pickBy((_val, key) => arr.includes(key), fields)
 
 const buildFieldsObject = ({
   schema,
@@ -281,7 +281,7 @@ const buildFieldsObject = ({
   modelName: string
   queryFields?: string[]
 }): object => {
-  const model = schema.getModel(modelName) as Model
+  const model = schema.getModel(modelName)
   const required = getRequiredFields(model)
   const requiredObj = required.reduce(
     (acc, val) => ({ ...acc, [val]: true }),
@@ -325,7 +325,7 @@ const buildFieldsObject = ({
 
 const buildSearchFieldsObject = (
   schema: SchemaBuilder,
-  model: Model
+  model: Schema
 ): QueryObject => {
   const required = getRequiredFields(model)
   const requiredObj = required.reduce(
@@ -335,7 +335,7 @@ const buildSearchFieldsObject = (
 
   let fields: QueryObject = {}
   fields.id = true
-  if (R.type(model.displayField) === 'String') {
+  if (typeof model.displayField === 'string') {
     fields[model.displayField] = true
   }
 
@@ -345,13 +345,15 @@ const buildSearchFieldsObject = (
 
   fields = R.mapObjIndexed((val, key) => {
     const field = schema.getField(model.modelName, key)
-    if (!schema.isRel(model.modelName, key)) {
+    if (!schema.isRel(model.modelName, key) || !field) {
       return val
     }
 
+    const fieldType = field.type as FieldTypeObject
+
     return buildSearchFieldsObject(
       schema,
-      schema.getModel(R.path(['type', 'target'], field) as string) as Model
+      schema.getModel(fieldType.target ?? '')
     )
   }, fields)
 
@@ -360,7 +362,7 @@ const buildSearchFieldsObject = (
 
 const buildSearchFieldsArray = (schema: SchemaBuilder): object[] => {
   const fieldsArray: object[] = []
-  R.forEachObjIndexed(model => {
+  R.forEachObjIndexed((model) => {
     if (schema.getSearchable(model.modelName)) {
       fieldsArray.push(buildSearchFieldsObject(schema, model))
     }
@@ -370,7 +372,7 @@ const buildSearchFieldsArray = (schema: SchemaBuilder): object[] => {
 
 const buildCascadesObject = (
   schema: SchemaBuilder,
-  model: Model
+  model: Schema
 ): QueryObject => {
   const required = getRequiredFields(model)
   const requiredObj = required.reduce(
@@ -381,7 +383,7 @@ const buildCascadesObject = (
   let cascades: QueryObject = {}
   cascades.__typename = true
   cascades.id = true
-  if (R.type(model.displayField) === 'String') {
+  if (typeof model.displayField === 'string') {
     cascades[model.displayField] = true
   }
 
@@ -391,14 +393,13 @@ const buildCascadesObject = (
 
   cascades = R.mapObjIndexed((val, key) => {
     const field = schema.getField(model.modelName, key)
-    if (!schema.isRel(model.modelName, key)) {
+    if (!schema.isRel(model.modelName, key) || !field) {
       return val
     }
 
-    return buildCascadesObject(
-      schema,
-      schema.getModel(R.path(['type', 'target'], field) as string) as Model
-    )
+    const fieldType = field.type as FieldTypeObject
+
+    return buildCascadesObject(schema, schema.getModel(fieldType.target ?? ''))
   }, cascades)
 
   return cascades
@@ -406,8 +407,8 @@ const buildCascadesObject = (
 
 const buildDeleteCascadesArray = (schema: SchemaBuilder): object[] => {
   const cascadesArray: object[] = []
-  R.forEachObjIndexed(model => {
-    if (!R.propEq('showDeleteModal', false, model))
+  R.forEachObjIndexed((model) => {
+    if (model.showDeleteModal !== false)
       cascadesArray.push(buildCascadesObject(schema, model))
   }, schema.schemaJSON)
   return cascadesArray
@@ -435,6 +436,11 @@ export const makeQueryBuilder = (schema: SchemaBuilder) => {
   }): object | string => {
     const queryName = getQueryName(schema, modelName, queryType)
     const queryVariables = getVariables({ modelName, queryType })
+
+    // queryName should not be null/undefined
+    if (!queryName) {
+      return {}
+    }
 
     switch (queryType) {
       case QueryType.INDEX:
