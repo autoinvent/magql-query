@@ -61,14 +61,14 @@ export class MagqlQuery {
         body: formData
       }
       return fetch(request, init)
-        .then(data => ({ data, error: false }))
-        .catch(err => ({ data: null, error: err }))
+        .then((data) => ({ data, error: false }))
+        .catch((err) => ({ data: null, error: err }))
     }
 
     return this.graphQLClient
       .request(query, variables)
-      .then(data => ({ data: Object.values(data)[0], error: false }))
-      .catch(err => ({ data: null, error: err }))
+      .then((data) => ({ data: Object.values(data)[0], error: false }))
+      .catch((err) => ({ data: null, error: err }))
   }
 
   buildAndSendRequest({

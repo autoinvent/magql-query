@@ -25,4 +25,4 @@ jobs:
       - name: Install dependencies
         run: yarn
       - name: Lint
-        run: yarn eslint 'src/**/*.ts'
+        run: yarn lint

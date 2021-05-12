@@ -6,7 +6,6 @@ module.exports = {
   },
   extends: [
     'plugin:@typescript-eslint/recommended',
-    'prettier/@typescript-eslint',
     'plugin:prettier/recommended'
   ],
   globals: {
@@ -20,6 +19,9 @@ module.exports = {
   rules: {
     'linebreak-style': ['error', 'unix'],
     quotes: ['error', 'single'],
-    semi: ['error', 'never']
-  }
+    semi: ['error', 'never'],
+    '@typescript-eslint/explicit-function-return-type': ['error'],
+    '@typescript-eslint/ban-types': ['off']
+  },
+  ignorePatterns: ['lib/**/*']
 }
