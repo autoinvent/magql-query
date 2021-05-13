@@ -224,10 +224,12 @@ const getRelFieldObject = ({
     'name',
     'displayField',
     schema.getModel(targetModel)
-  ) as string
-  if (targetModelDisplayField) {
+  )
+  if (typeof targetModelDisplayField === 'function') {
+    relFieldObject[targetModelDisplayField()] = true
+  } else if (typeof targetModelDisplayField === 'string') {
     relFieldObject[targetModelDisplayField] = true
-  } // todo: targetModelDisplayField can be function and not string???
+  }
   return relFieldObject
 }
 
