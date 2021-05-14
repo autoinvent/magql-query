@@ -9,17 +9,21 @@
   "license": "BSD-3-Clause",
   "scripts": {
     "build": "rm -rf lib && tsc",
-    "lint": "npx eslint ."
+    "lint": "npx eslint .",
+    "docs": "npx typedoc --plugin none --out docs/build src/index.ts",
+    "docs:watch": "npx typedoc --watch --plugin none --out docs/build src/index.ts",
+    "docs:github": "npx typedoc --plugin typedoc-plugin-markdown --theme ./node_modules/typedoc-github-wiki-theme/dist --out docs/gh-pages src/index.ts"
   },
   "dependencies": {
     "core-js": "^3.12.1",
     "graphql": "^15.5.0",
     "graphql-request": "^3.4.0",
     "json-to-graphql-query": "^2.0.0",
-    "ramda": "^0.27.1"
+    "ramda": "^0.27.1",
+    "remeda": "^0.0.27"
   },
   "devDependencies": {
-    "@autoinvent/conveyor-schema": "^0.3.0",
+    "@autoinvent/conveyor-schema": "^0.3.1",
     "@types/ramda": "^0.27.40",
     "@typescript-eslint/eslint-plugin": "^4.23.0",
     "@typescript-eslint/parser": "^4.23.0",
@@ -27,6 +31,9 @@
     "eslint-config-prettier": "^8.3.0",
     "eslint-plugin-prettier": "^3.4.0",
     "prettier": "^2.3.0",
+    "typedoc": "^0.20.36",
+    "typedoc-github-wiki-theme": "^0.3.0",
+    "typedoc-plugin-markdown": "^3.8.1",
     "typescript": "^4.2.4"
   }
 }
