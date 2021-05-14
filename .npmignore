@@ -5,11 +5,9 @@ src
 *.tgz
 yalc.lock
 .yalc
-.github/workflows/CI.yml
+.github
 yarn.lock
 yarn-error.log
 tsconfig.json
 prettier.config.js
 docs
-.venv
-gh-pages

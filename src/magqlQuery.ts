@@ -14,7 +14,7 @@ import { QueryBuilder, QueryType, QueryVariables } from './types'
  * ⠀
  * magqlQuery.sendRequest({ query, variables })
  * OR
- * magqlQuery.sendRequest({ formData, variables })
+ * magqlQuery.sendRequest({ formData })
  * ⠀
  * magqlQuery.buildAndSendRequest({ modelName, fieldName, variables, queryType })
  * ```
@@ -77,7 +77,7 @@ class MagqlQuery {
     formData
   }: {
     query?: string
-    variables: QueryVariables
+    variables?: QueryVariables
     formData?: string
   }): Promise<
     | {
