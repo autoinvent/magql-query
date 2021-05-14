@@ -7,7 +7,7 @@
 A library for building and sending queries to a [magql](https://github.com/autoinvent/magql)-generated GraphQL API.
 
 ## Docs
-[View the docs here](https://magql-query.github.io/)
+[View the docs here](https://autoinvent.github.io/magql-query/)
 ## Installation
 
 ```bash
