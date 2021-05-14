@@ -4,9 +4,7 @@
 /.yarn-error.log
 /*.tgz
 /lib
-/docs/Makefile
-/docs/conf.py
-/docs/_build/
 yalc.lock
 /.yalc
 /coverage
+/docs

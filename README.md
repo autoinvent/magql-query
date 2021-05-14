@@ -1,25 +1,43 @@
 # magql-query
+
+[![npm version](https://badge.fury.io/js/%40autoinvent%2Fmagql-query.svg)](https://badge.fury.io/js/%40autoinvent%2Fmagql-query)
 ![CI](https://github.com/autoinvent/magql-query/workflows/CI/badge.svg?branch=master)
+![license](https://img.shields.io/github/license/autoinvent/magql-query)
 
-Build GraphQL queries to send to Magql.
+A library for building and sending queries to a [magql](https://github.com/autoinvent/magql)-generated GraphQL API.
 
+## Docs
+[View the docs here](https://magql-query.github.io/)
+## Installation
 
-# Contributing
+```bash
+yarn add @autoinvent/magql-query
+```
 
-First, test package in autoinvent_example repo:
+With npm:
 
-1.) build /lib files with your new changes in magql-query repo;
+```bash
+npm install --save @autoinvent/magql-query
+```
 
-    yarn run build
-    
-2.) run in magql-query repo
+## Usage
 
-    yalc publish
-    
-3.) run in autoinvent_example repo
+**IMPORTANT**: This package requires the usage of [conveyor-schema](https://github.com/autoinvent/conveyor-schema) for creating the SchemaBuilder object to pass to the MagqlQuery constructor.
 
-    yalc add @autoinvent/magql-query 
-    
-4.) for every new change in magql-query, to test out and reload, simply repeat step 1 and run in magql-query repo:
+### Example
 
-    yalc push
+```typescript
+import { MagqlQuery } from '@autoinvent/magql-query'
+import { SchemaBuilder } from '@autoinvent/conveyor-schema'
+
+// would also require a schema.mergeSchema(remoteSchema) with the remote (backend) schema in practice
+const schema = new SchemaBuilder(schemaJSON)
+const endpoint = 'your/graphql/api/endpoint'
+
+const magqlQuery = new MagqlQuery({ schema, endpoint })
+
+// see docs for method options
+magqlQuery.buildQuery({ ... })
+magqlQuery.sendRequest({ ... }).then(({ data, error }) => {/* do something */})
+magqlQuery.buildAndSendRequest({ ... }).then({ data, error }) => {/* do something */})
+```

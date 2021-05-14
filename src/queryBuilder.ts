@@ -1,40 +1,14 @@
 import * as R from 'ramda'
+import * as RE from 'remeda'
 import { VariableType } from 'json-to-graphql-query'
 import { SchemaBuilder } from '@autoinvent/conveyor-schema'
+import { jsonToGraphQLQuery } from 'json-to-graphql-query'
 import {
-  Field,
   FieldTypeObject,
+  isFieldTypeObject,
   Schema
 } from '@autoinvent/conveyor-schema/lib/schemaJson'
-
-/*
-create
-edit
-index
-select
-detail
-tooltip
-check_delete
-delete
-search
-*/
-
-export enum QueryType {
-  INDEX = 'index',
-  DETAIL = 'detail',
-  SELECT = 'select',
-  TOOLTIP = 'tooltip',
-  INDEX_REL = 'indexRelationship',
-  DETAIL_REL = 'detailRelationship',
-  SELECT_REL = 'selectRelationship',
-  SEARCH = 'search',
-  CREATE = 'create',
-  UPDATE = 'update',
-  DELETE = 'delete',
-  DELETE_CASCADES = 'deleteCascades',
-  SELECT_EXISTING_FIELDS = 'selectExistingFields'
-}
-
+import { QueryType, QueryVariables, RelFieldQueryType } from './types'
 interface QueryObject {
   [k: string]: string | boolean | QueryObject
 }
@@ -53,107 +27,119 @@ const getRelTableFields = ({
   return fieldType?.tableFields ?? []
 }
 
-const getQueryName = (
-  schema: SchemaBuilder,
-  modelName: string,
+const getQueryName = ({
+  schema,
+  modelName,
+  queryType
+}: {
+  schema: SchemaBuilder
+  modelName: string | undefined
   queryType: QueryType
-): string | undefined => {
+}): string | undefined => {
+  if (!modelName) return queryType
+
   const model = schema.getModel(modelName)
   switch (queryType) {
-    case QueryType.INDEX:
-    case QueryType.SELECT:
+    case 'index':
+    case 'select':
       return model.queryAllName
-    case QueryType.DETAIL:
-    case QueryType.TOOLTIP:
+    case 'detail':
+    case 'tooltip':
       return model.queryName
-    case QueryType.CREATE:
-    case QueryType.UPDATE:
-    case QueryType.DELETE:
+    case 'create':
+    case 'update':
+    case 'delete':
       return model.queryName
     default:
       return queryType
   }
 }
 
-const getSortVariable = (modelName: string): string => `${modelName}Sort`
-
-const getListVariables = (modelName: string): object => ({
-  filter: `${modelName}Filter`,
-  sort: `[${getSortVariable(modelName)}!]`,
-  page: 'Page'
-})
-
-const detailVariables = {
-  id: 'ID!'
-}
-
 const getVariables = ({
   modelName,
   queryType
 }: {
-  modelName: string
+  modelName: string | undefined
   queryType: QueryType
-}): object => {
+}): QueryVariables => {
   switch (queryType) {
-    case QueryType.INDEX:
-      return getListVariables(modelName)
-    case QueryType.DELETE:
-    case QueryType.DETAIL:
-    case QueryType.TOOLTIP:
-      return detailVariables
-    case QueryType.SELECT:
-      return { sort: `[${getSortVariable(modelName)}!]` }
-    case QueryType.SEARCH:
+    case 'index':
+      return {
+        filter: `${modelName}Filter`,
+        sort: `[${modelName}Sort!]`,
+        page: 'Page'
+      }
+    case 'delete':
+    case 'detail':
+    case 'tooltip':
+      return { id: 'ID!' }
+    case 'select':
+      return { sort: `[${modelName}Sort!]` }
+    case 'search':
       return { queryString: 'String!' }
-    case QueryType.CREATE:
+    case 'create':
       return { input: `${modelName}InputRequired!` }
-    case QueryType.UPDATE:
+    case 'update':
       return { input: `${modelName}Input!`, id: 'ID!' }
-    case QueryType.DELETE_CASCADES:
+    case 'deleteCascades':
       return { modelName: 'String!', id: 'ID!' }
     default:
-      return { queryType: 'defaultQueryType' }
+      console.error(`Invalid queryType: ${queryType}`)
+      return {}
   }
 }
 
-const getArgs = (queryType: QueryType): object => {
+interface QueryArgs {
+  filter?: VariableType
+  sort?: VariableType
+  page?: VariableType
+  id?: VariableType
+  queryString?: VariableType
+  input?: VariableType
+  tableName?: VariableType
+}
+
+const getArgs = (queryType: QueryType): QueryArgs => {
   switch (queryType) {
-    case QueryType.INDEX:
+    case 'index':
       return {
         filter: new VariableType('filter'),
         sort: new VariableType('sort'),
         page: new VariableType('page')
       }
-    case QueryType.DELETE:
-    case QueryType.DETAIL:
-    case QueryType.TOOLTIP:
+    case 'delete':
+    case 'detail':
+    case 'tooltip':
       return { id: new VariableType('id') }
-    case QueryType.SELECT:
+    case 'select':
       return { sort: new VariableType('sort') }
-    case QueryType.SEARCH:
+    case 'search':
       return { queryString: new VariableType('queryString') }
-    case QueryType.CREATE:
+    case 'create':
       return { input: new VariableType('input') }
-    case QueryType.UPDATE:
+    case 'update':
       return { input: new VariableType('input'), id: new VariableType('id') }
-    case QueryType.DELETE_CASCADES:
+    case 'deleteCascades':
       return {
         tableName: new VariableType('modelName'),
         id: new VariableType('id')
       }
     default:
-      return { queryType: 'defaultQueryType' }
+      console.error(`Invalid queryType: ${queryType}`)
+      return {}
   }
 }
 
-const getFieldQueryType = (queryType: QueryType): QueryType => {
+const getFieldQueryType = (
+  queryType: QueryType | RelFieldQueryType
+): QueryType | RelFieldQueryType => {
   switch (queryType) {
-    case QueryType.INDEX:
-      return QueryType.INDEX_REL
-    case QueryType.DETAIL:
-      return QueryType.DETAIL_REL
-    case QueryType.SELECT:
-      return QueryType.SELECT_REL
+    case 'index':
+      return 'indexRelationship'
+    case 'detail':
+      return 'detailRelationship'
+    case 'select':
+      return 'selectRelationship'
     default:
       return queryType
   }
@@ -162,32 +148,30 @@ const getFieldQueryType = (queryType: QueryType): QueryType => {
 const getQueryIndexFields = (
   schema: SchemaBuilder,
   modelName: string
-): object => {
-  const indexFields: string[] = schema.getIndexFields({
+): Record<string, boolean> => {
+  const indexFields = schema.getIndexFields({
     modelName,
     customProps: {}
   })
-  const fields = R.pipe(
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    R.prop<string, any>('fields'),
-    R.map(
-      (field: Field) =>
-        R.includes(R.prop('fieldName', field), indexFields) ||
-        R.prop('queryIndex', field)
+  const fields = RE.pipe(
+    schema.getModel(modelName),
+    RE.prop('fields'),
+    RE.mapValues(
+      (field) => indexFields.includes(field.fieldName) || field.queryIndex
     )
-  )(schema.getModel(modelName)) as boolean[]
-  return R.filter(R.identity, fields)
+  )
+  return R.pickBy(Boolean, fields)
 }
 
 const getQueryDetailFields = (
   schema: SchemaBuilder,
   modelName: string
-): object => {
+): Record<string, boolean | string> => {
   const fields = R.filter(
-    (field: Field) =>
-      ((R.propOr(true, 'showDetail', field) ||
-        R.prop('queryDetail', field)) as boolean) &&
-      !R.prop('virtualField', field),
+    (field) =>
+      Boolean(
+        ((field.showDetail ?? true) || field.queryDetail) && !field.virtualField
+      ),
     schema.getFields(modelName)
   )
   const model = schema.getModel(modelName)
@@ -199,7 +183,7 @@ const getQueryDetailFields = (
   }, fields)
 }
 // needs to be removed?
-const makeRelayNodeConnection = (nodeQueryObj: object): object => ({
+const makeRelayNodeConnection = (nodeQueryObj: QueryObject): QueryObject => ({
   __typename: true,
   ...nodeQueryObj
 })
@@ -212,22 +196,32 @@ const getRelFieldObject = ({
   schema: SchemaBuilder
   modelName: string
   fieldName: string
-}): object => {
+}): QueryObject => {
   const relFieldObject: QueryObject = {
     id: true
   }
-  const targetModel = R.path(
-    ['type', 'target'],
-    schema.getField(modelName, fieldName)
-  ) as string
-  const targetModelDisplayField = R.propOr(
-    'name',
-    'displayField',
-    schema.getModel(targetModel)
-  ) as string
-  if (targetModelDisplayField) {
+  const targetModelFieldType = schema.getField(modelName, fieldName)?.type
+
+  if (!isFieldTypeObject(targetModelFieldType)) {
+    console.error(`${fieldName} is not a relationship field`)
+    return relFieldObject
+  }
+
+  const targetModel = targetModelFieldType?.target
+
+  if (!targetModel) {
+    console.error(
+      `Target model not found for relationship field ${fieldName} of model ${modelName}`
+    )
+    return relFieldObject
+  }
+
+  const targetModelDisplayField =
+    schema.getModel(targetModel).displayField ?? 'name'
+
+  if (typeof targetModelDisplayField === 'string') {
     relFieldObject[targetModelDisplayField] = true
-  } // todo: targetModelDisplayField can be function and not string???
+  }
   return relFieldObject
 }
 
@@ -237,15 +231,15 @@ const buildTooltipFieldsObject = ({
 }: {
   schema: SchemaBuilder
   modelName: string
-}): object => {
+}): Record<string, unknown> => {
   // todo: insert customProps from outside application
   const fields = schema.getTooltipFields({
     modelName,
     customProps: {}
-  }) as string[]
-  return R.pipe(
-    R.reduce((accumulator, fieldName: string) => {
-      const type = schema.getType(modelName, fieldName) as string
+  })
+  return R.reduce(
+    (accumulator, fieldName: string) => {
+      const type = schema.getType(modelName, fieldName)
       if (type && type.includes('ToMany')) {
         return R.assoc(
           fieldName,
@@ -263,11 +257,16 @@ const buildTooltipFieldsObject = ({
       } else {
         return R.assoc(fieldName, true, accumulator)
       }
-    }, {})
-  )(fields)
+    },
+    {},
+    fields
+  )
 }
 
-const pickFields = (arr: string[], fields: object): object =>
+const pickFields = (
+  arr: string[],
+  fields: Record<string, boolean | string>
+): Record<string, boolean | string> =>
   R.pickBy((_val, key) => arr.includes(key), fields)
 
 const buildFieldsObject = ({
@@ -277,10 +276,15 @@ const buildFieldsObject = ({
   queryFields = []
 }: {
   schema: SchemaBuilder
-  queryType: QueryType
-  modelName: string
+  queryType: QueryType | RelFieldQueryType
+  modelName: string | undefined
   queryFields?: string[]
-}): object => {
+}): Record<string, unknown> => {
+  if (!modelName) {
+    console.error('No model supplied to build fields object for query!')
+    return {}
+  }
+
   const model = schema.getModel(modelName)
   const required = getRequiredFields(model)
   const requiredObj = required.reduce(
@@ -288,17 +292,17 @@ const buildFieldsObject = ({
     {}
   )
 
-  if (queryType === QueryType.TOOLTIP) {
+  if (queryType === 'tooltip') {
     return buildTooltipFieldsObject({ schema, modelName })
   }
 
-  let fields = ((): object => {
+  let fields = ((): Record<string, unknown> => {
     switch (queryType) {
-      case QueryType.INDEX:
+      case 'index':
         return getQueryIndexFields(schema, modelName)
-      case QueryType.DETAIL:
+      case 'detail':
         return getQueryDetailFields(schema, modelName)
-      case QueryType.DETAIL_REL:
+      case 'detailRelationship':
         return pickFields(queryFields, getQueryDetailFields(schema, modelName))
       default:
         return {}
@@ -360,8 +364,8 @@ const buildSearchFieldsObject = (
   return fields
 }
 
-const buildSearchFieldsArray = (schema: SchemaBuilder): object[] => {
-  const fieldsArray: object[] = []
+const buildSearchFieldsArray = (schema: SchemaBuilder): QueryObject[] => {
+  const fieldsArray: QueryObject[] = []
   R.forEachObjIndexed((model) => {
     if (schema.getSearchable(model.modelName)) {
       fieldsArray.push(buildSearchFieldsObject(schema, model))
@@ -405,8 +409,8 @@ const buildCascadesObject = (
   return cascades
 }
 
-const buildDeleteCascadesArray = (schema: SchemaBuilder): object[] => {
-  const cascadesArray: object[] = []
+const buildDeleteCascadesArray = (schema: SchemaBuilder): QueryObject[] => {
+  const cascadesArray: QueryObject[] = []
   R.forEachObjIndexed((model) => {
     if (model.showDeleteModal !== false)
       cascadesArray.push(buildCascadesObject(schema, model))
@@ -418,36 +422,45 @@ const generatePrepopulatedQuery = ({
   modelName,
   fieldName
 }: {
-  fieldName: string
-  modelName: string
-}): string => `{
-  result: existingFieldValues(modelName: "${modelName}", fieldName: "${fieldName}")
-}`
+  fieldName: string | undefined
+  modelName: string | undefined
+}): string => {
+  if (!fieldName || !modelName) {
+    console.error(
+      'No field name or model name provided for SELECT_EXISTING_FIELDS query'
+    )
+    return ''
+  }
+  return `{ result: existingFieldValues(modelName: "${modelName}", fieldName: "${fieldName}") }`
+}
 
-export const makeQueryBuilder = (schema: SchemaBuilder) => {
+const makeQueryBuilder = (schema: SchemaBuilder) => {
   return ({
     modelName,
     fieldName,
-    queryType = QueryType.INDEX
+    queryType = 'index'
   }: {
-    modelName: string
-    fieldName: string
+    modelName?: string
+    fieldName?: string
     queryType: QueryType
-  }): object | string => {
-    const queryName = getQueryName(schema, modelName, queryType)
+  }): string => {
+    const queryName = getQueryName({ schema, modelName, queryType })
     const queryVariables = getVariables({ modelName, queryType })
 
     // queryName should not be null/undefined
     if (!queryName) {
-      return {}
+      console.error(
+        `queryName for ${modelName}'s ${queryType} query was null or undefined`
+      )
+      return ''
     }
 
     switch (queryType) {
-      case QueryType.INDEX:
-      case QueryType.DETAIL:
-      case QueryType.SELECT:
-      case QueryType.TOOLTIP:
-        return {
+      case 'index':
+      case 'detail':
+      case 'select':
+      case 'tooltip':
+        return jsonToGraphQLQuery({
           query: {
             __variables: queryVariables,
             [queryName]: {
@@ -456,12 +469,12 @@ export const makeQueryBuilder = (schema: SchemaBuilder) => {
                 ...buildFieldsObject({ schema, modelName, queryType })
               },
               errors: true,
-              count: queryType === QueryType.INDEX
+              count: queryType === 'index'
             }
           }
-        }
-      case QueryType.SEARCH:
-        return {
+        })
+      case 'search':
+        return jsonToGraphQLQuery({
           query: {
             __variables: queryVariables,
             search: {
@@ -470,11 +483,11 @@ export const makeQueryBuilder = (schema: SchemaBuilder) => {
               __on: buildSearchFieldsArray(schema)
             }
           }
-        }
-      case QueryType.CREATE:
-      case QueryType.UPDATE:
-      case QueryType.DELETE:
-        return {
+        })
+      case 'create':
+      case 'update':
+      case 'delete':
+        return jsonToGraphQLQuery({
           mutation: {
             __variables: queryVariables,
             [`${queryType}${modelName}`]: {
@@ -486,9 +499,9 @@ export const makeQueryBuilder = (schema: SchemaBuilder) => {
               errors: true
             }
           }
-        }
-      case QueryType.DELETE_CASCADES:
-        return {
+        })
+      case 'deleteCascades':
+        return jsonToGraphQLQuery({
           query: {
             __variables: queryVariables,
             checkDelete: {
@@ -496,11 +509,14 @@ export const makeQueryBuilder = (schema: SchemaBuilder) => {
               __on: buildDeleteCascadesArray(schema)
             }
           }
-        }
-      case QueryType.SELECT_EXISTING_FIELDS:
+        })
+      case 'selectExistingFields':
         return generatePrepopulatedQuery({ modelName, fieldName })
       default:
-        return { queryType: 'defaultQueryType' }
+        console.error(`Invalid queryType: ${queryType}`)
+        return ''
     }
   }
 }
+
+export default makeQueryBuilder

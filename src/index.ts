@@ -1,5 +1,4 @@
-import { MagqlQuery } from './magqlQuery'
-import { makeQueryBuilder } from './queryBuilder'
+export { default as MagqlQuery } from './magqlQuery'
 
-export { MagqlQuery }
-export { makeQueryBuilder }
+// Exported Types
+export { QueryType, QueryVariables } from './types'

@@ -20,8 +20,7 @@ module.exports = {
     'linebreak-style': ['error', 'unix'],
     quotes: ['error', 'single'],
     semi: ['error', 'never'],
-    '@typescript-eslint/explicit-function-return-type': ['error'],
-    '@typescript-eslint/ban-types': ['off']
+    '@typescript-eslint/explicit-function-return-type': ['warn']
   },
-  ignorePatterns: ['lib/**/*']
+  ignorePatterns: ['lib/**/*', 'docs/**/*', 'gh-pages/**/*']
 }

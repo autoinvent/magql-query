@@ -11,3 +11,5 @@ yarn-error.log
 tsconfig.json
 prettier.config.js
 docs
+.venv
+gh-pages
