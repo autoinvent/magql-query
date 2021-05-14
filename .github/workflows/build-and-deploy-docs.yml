@@ -14,10 +14,10 @@ jobs:
       - name: Install and Build 🔧
         run: |
           yarn
-          yarn docs:github
+          yarn docs
 
       - name: Deploy 🚀
         uses: JamesIves/github-pages-deploy-action@4.1.3
         with:
           branch: gh-pages
-          folder: docs/gh-pages
+          folder: docs

@@ -1237,18 +1237,6 @@ typedoc-default-themes@^0.12.10:
   resolved "https://registry.yarnpkg.com/typedoc-default-themes/-/typedoc-default-themes-0.12.10.tgz#614c4222fe642657f37693ea62cad4dafeddf843"
   integrity sha512-fIS001cAYHkyQPidWXmHuhs8usjP5XVJjWB8oZGqkTowZaz3v7g3KDZeeqE82FBrmkAnIBOY3jgy7lnPnqATbA==
 
-typedoc-github-wiki-theme@^0.3.0:
-  version "0.3.0"
-  resolved "https://registry.yarnpkg.com/typedoc-github-wiki-theme/-/typedoc-github-wiki-theme-0.3.0.tgz#201665680de1693c21b14c0ff4acdc0d2949897d"
-  integrity sha512-YMnpahBvsk0FlmHM3Djq+U25YZgiXSXdNzPRqu/mQY9QXHHzIKJmLm6r3Qz2U2NfD7xWyfoODpX/UY5Zz9434g==
-
-typedoc-plugin-markdown@^3.8.1:
-  version "3.8.1"
-  resolved "https://registry.yarnpkg.com/typedoc-plugin-markdown/-/typedoc-plugin-markdown-3.8.1.tgz#4dee56d46e5aa0be884b8a59c7d7f62ac8f77b53"
-  integrity sha512-SzDSSJwwMq3ZHmn2MN/5U0XxwNhCiJ7pC7s3kczsT9JeRJnFgxv6xmMAQSxEx35bjoZLQ18vdSd9cXgIxhVQZQ==
-  dependencies:
-    handlebars "^4.7.7"
-
 typedoc@^0.20.36:
   version "0.20.36"
   resolved "https://registry.yarnpkg.com/typedoc/-/typedoc-0.20.36.tgz#ee5523c32f566ad8283fc732aa8ea322d1a45f6a"
