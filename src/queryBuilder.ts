@@ -83,6 +83,8 @@ const getVariables = ({
       return { input: `${modelName}Input!`, id: 'ID!' }
     case 'deleteCascades':
       return { modelName: 'String!', id: 'ID!' }
+    case 'selectExistingFields':
+      return {}
     default:
       console.error(`Invalid queryType: ${queryType}`)
       return {}
