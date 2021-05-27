@@ -1,7 +1,7 @@
 # magql-query
 
 [![npm version](https://badge.fury.io/js/%40autoinvent%2Fmagql-query.svg)](https://badge.fury.io/js/%40autoinvent%2Fmagql-query)
-![CI](https://github.com/autoinvent/magql-query/workflows/CI/badge.svg?branch=master)
+![CI](https://github.com/autoinvent/magql-query/workflows/CI/badge.svg?branch=main)
 ![license](https://img.shields.io/github/license/autoinvent/magql-query)
 
 A library for building and sending queries to a [magql](https://github.com/autoinvent/magql)-generated GraphQL API.
