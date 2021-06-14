@@ -14,8 +14,8 @@ interface QueryObject {
 }
 
 const getRequiredFields = (model: Schema): string[] =>
-  R.union(['__typeName', 'id'], RE.pathOr(model, ['queryRequired'], []))
-
+  R.union(['__typeName', 'id'], model.queryRequired ?? [])
+  
 const getRelTableFields = ({
   fieldName,
   model
