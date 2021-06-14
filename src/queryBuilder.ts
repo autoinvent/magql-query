@@ -14,7 +14,7 @@ interface QueryObject {
 }
 
 const getRequiredFields = (model: Schema): string[] =>
-  R.union(['__typeName', 'id'], R.pathOr([], ['queryRequired'], model))
+  R.union(['__typeName', 'id'], RE.pathOr(model, ['queryRequired'], []))
 
 const getRelTableFields = ({
   fieldName,
@@ -176,12 +176,13 @@ const getQueryDetailFields = (
       ),
     schema.getFields(modelName)
   )
+  
   const model = schema.getModel(modelName)
-  return R.mapObjIndexed((val, key) => {
-    const show =
-      R.pathOr(true, ['fields', key, 'showDetail'], model) ||
-      R.path(['fields', key, 'queryDetail'], model)
-    return R.pathOr(show, ['fields', key, 'type', 'type'], model)
+  return R.mapObjIndexed((val, key) => { //remeda to do 
+    const show = Boolean((model.fields?.[key]?.showDetail ?? true) || model.fields?.[key]?.queryDetail)
+    const fieldType = model.fields[key].type
+
+    return isFieldTypeObject(fieldType) ? fieldType.type : show
   }, fields)
 }
 // needs to be removed?
@@ -239,7 +240,8 @@ const buildTooltipFieldsObject = ({
     modelName,
     customProps: {}
   })
-  return R.reduce(
+  return RE.reduce(
+    fields,
     (accumulator, fieldName: string) => {
       const type = schema.getType(modelName, fieldName)
       if (type && type.includes('ToMany')) {
@@ -260,8 +262,7 @@ const buildTooltipFieldsObject = ({
         return R.assoc(fieldName, true, accumulator)
       }
     },
-    {},
-    fields
+    {}
   )
 }
 
@@ -317,11 +318,11 @@ const buildFieldsObject = ({
     if (!schema.isRel(modelName, key)) {
       return val
     }
-
+    const fieldType = field?.type
     return buildFieldsObject({
       schema,
       queryType: getFieldQueryType(queryType),
-      modelName: R.path(['type', 'target'], field) as string,
+      modelName: isFieldTypeObject(fieldType) ? fieldType.target : fieldType,
       queryFields: getRelTableFields({ model, fieldName: key })
     })
   }, fields)
