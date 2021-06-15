@@ -15,7 +15,7 @@ interface QueryObject {
 
 const getRequiredFields = (model: Schema): string[] =>
   R.union(['__typeName', 'id'], model.queryRequired ?? [])
-  
+
 const getRelTableFields = ({
   fieldName,
   model
@@ -178,12 +178,12 @@ const getQueryDetailFields = (
   )
   
   const model = schema.getModel(modelName)
-  return R.mapObjIndexed((val, key) => { //remeda to do 
+  return RE.mapValues(fields, (val, key) => { 
     const show = Boolean((model.fields?.[key]?.showDetail ?? true) || model.fields?.[key]?.queryDetail)
     const fieldType = model.fields[key].type
 
     return isFieldTypeObject(fieldType) ? fieldType.type : show
-  }, fields)
+  })
 }
 // needs to be removed?
 const makeRelayNodeConnection = (nodeQueryObj: QueryObject): QueryObject => ({
@@ -313,7 +313,7 @@ const buildFieldsObject = ({
   })()
   fields = R.mergeDeepLeft(requiredObj, fields)
   // replace with query object when fieldName is Relationship type
-  fields = R.mapObjIndexed((val, key) => {
+  fields = RE.mapValues(fields, (val, key) => {
     const field = schema.getField(modelName, key)
     if (!schema.isRel(modelName, key)) {
       return val
@@ -325,8 +325,7 @@ const buildFieldsObject = ({
       modelName: isFieldTypeObject(fieldType) ? fieldType.target : fieldType,
       queryFields: getRelTableFields({ model, fieldName: key })
     })
-  }, fields)
-
+  })
   return fields
 }
 
@@ -349,10 +348,9 @@ const buildSearchFieldsObject = (
   fields = R.mergeDeepLeft(requiredObj, fields)
 
   fields.__typeName = model.modelName
-
-  fields = R.mapObjIndexed((val, key) => {
-    const field = schema.getField(model.modelName, key)
-    if (!schema.isRel(model.modelName, key) || !field) {
+  fields = RE.mapValues(fields, (val, key) => {
+    const field = schema.getField(model.modelName, key as string)
+    if (!schema.isRel(model.modelName, key as string) || !field) {
       return val
     }
 
@@ -362,8 +360,7 @@ const buildSearchFieldsObject = (
       schema,
       schema.getModel(fieldType.target ?? '')
     )
-  }, fields)
-
+  } )
   return fields
 }
 
@@ -397,18 +394,16 @@ const buildCascadesObject = (
   cascades = R.mergeDeepLeft(requiredObj, cascades)
 
   cascades.__typeName = model.modelName
-
-  cascades = R.mapObjIndexed((val, key) => {
-    const field = schema.getField(model.modelName, key)
-    if (!schema.isRel(model.modelName, key) || !field) {
+  cascades = RE.mapValues(cascades, (val, key) => {
+    const field = schema.getField(model.modelName, key as string)
+    if (!schema.isRel(model.modelName, key as string) || !field) {
       return val
     }
 
     const fieldType = field.type as FieldTypeObject
 
     return buildCascadesObject(schema, schema.getModel(fieldType.target ?? ''))
-  }, cascades)
-
+  } )
   return cascades
 }
 
