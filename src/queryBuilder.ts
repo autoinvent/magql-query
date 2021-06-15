@@ -176,10 +176,13 @@ const getQueryDetailFields = (
       ),
     schema.getFields(modelName)
   )
-  
+
   const model = schema.getModel(modelName)
-  return RE.mapValues(fields, (val, key) => { 
-    const show = Boolean((model.fields?.[key]?.showDetail ?? true) || model.fields?.[key]?.queryDetail)
+  return RE.mapValues(fields, (val, key) => {
+    const show = Boolean(
+      (model.fields?.[key]?.showDetail ?? true) ||
+        model.fields?.[key]?.queryDetail
+    )
     const fieldType = model.fields[key].type
 
     return isFieldTypeObject(fieldType) ? fieldType.type : show
@@ -350,8 +353,8 @@ const buildSearchFieldsObject = (
   fields.__typeName = model.modelName
 
   fields = RE.mapValues(fields, (val, key) => {
-    const field = schema.getField(model.modelName, key as string)
-    if (!schema.isRel(model.modelName, key as string) || !field) {
+    const field = schema.getField(model.modelName, key.toString())
+    if (!schema.isRel(model.modelName, key.toString()) || !field) {
       return val
     }
     const fieldType = field.type as FieldTypeObject
@@ -396,8 +399,8 @@ const buildCascadesObject = (
   cascades.__typeName = model.modelName
 
   cascades = RE.mapValues(cascades, (val, key) => {
-    const field = schema.getField(model.modelName, key as string)
-    if (!schema.isRel(model.modelName, key as string) || !field) {
+    const field = schema.getField(model.modelName, key.toString())
+    if (!schema.isRel(model.modelName, key.toString()) || !field) {
       return val
     }
     const fieldType = field.type as FieldTypeObject
