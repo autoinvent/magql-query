@@ -311,7 +311,7 @@ const buildFieldsObject = ({
         return {}
     }
   })()
-  fields = R.mergeDeepLeft(requiredObj, fields)
+  fields = RE.merge(fields, requiredObj)
   // replace with query object when fieldName is Relationship type
   fields = RE.mapValues(fields, (val, key) => {
     const field = schema.getField(modelName, key)
@@ -345,32 +345,32 @@ const buildSearchFieldsObject = (
     fields[model.displayField] = true
   }
 
-  fields = R.mergeDeepLeft(requiredObj, fields)
+  fields = RE.merge(fields, requiredObj)
 
   fields.__typeName = model.modelName
+
   fields = RE.mapValues(fields, (val, key) => {
     const field = schema.getField(model.modelName, key as string)
     if (!schema.isRel(model.modelName, key as string) || !field) {
       return val
     }
-
     const fieldType = field.type as FieldTypeObject
 
     return buildSearchFieldsObject(
       schema,
       schema.getModel(fieldType.target ?? '')
     )
-  } )
+  })
   return fields
 }
 
 const buildSearchFieldsArray = (schema: SchemaBuilder): QueryObject[] => {
   const fieldsArray: QueryObject[] = []
-  R.forEachObjIndexed((model) => {
+  RE.forEachObj(schema.schemaJSON, (model) => {
     if (schema.getSearchable(model.modelName)) {
       fieldsArray.push(buildSearchFieldsObject(schema, model))
     }
-  }, schema.schemaJSON)
+  })
   return fieldsArray
 }
 
@@ -391,28 +391,28 @@ const buildCascadesObject = (
     cascades[model.displayField] = true
   }
 
-  cascades = R.mergeDeepLeft(requiredObj, cascades)
+  cascades = RE.merge(cascades, requiredObj)
 
   cascades.__typeName = model.modelName
+
   cascades = RE.mapValues(cascades, (val, key) => {
     const field = schema.getField(model.modelName, key as string)
     if (!schema.isRel(model.modelName, key as string) || !field) {
       return val
     }
-
     const fieldType = field.type as FieldTypeObject
 
     return buildCascadesObject(schema, schema.getModel(fieldType.target ?? ''))
-  } )
+  })
   return cascades
 }
 
 const buildDeleteCascadesArray = (schema: SchemaBuilder): QueryObject[] => {
   const cascadesArray: QueryObject[] = []
-  R.forEachObjIndexed((model) => {
+  RE.forEachObj(schema.schemaJSON, (model) => {
     if (model.showDeleteModal !== false)
       cascadesArray.push(buildCascadesObject(schema, model))
-  }, schema.schemaJSON)
+  })
   return cascadesArray
 }
 
