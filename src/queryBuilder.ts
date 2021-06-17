@@ -14,7 +14,7 @@ interface QueryObject {
 }
 
 const getRequiredFields = (model: Schema): string[] =>
-  R.union(['__typeName', 'id'], R.pathOr([], ['queryRequired'], model))
+  R.union(['__typeName', 'id'], model.queryRequired ?? [])
 
 const getRelTableFields = ({
   fieldName,
@@ -176,13 +176,17 @@ const getQueryDetailFields = (
       ),
     schema.getFields(modelName)
   )
+
   const model = schema.getModel(modelName)
-  return R.mapObjIndexed((val, key) => {
-    const show =
-      R.pathOr(true, ['fields', key, 'showDetail'], model) ||
-      R.path(['fields', key, 'queryDetail'], model)
-    return R.pathOr(show, ['fields', key, 'type', 'type'], model)
-  }, fields)
+  return RE.mapValues(fields, (val, key) => {
+    const show = Boolean(
+      (model.fields?.[key]?.showDetail ?? true) ||
+        model.fields?.[key]?.queryDetail
+    )
+    const fieldType = model.fields[key].type
+
+    return isFieldTypeObject(fieldType) ? fieldType.type : show
+  })
 }
 // needs to be removed?
 const makeRelayNodeConnection = (nodeQueryObj: QueryObject): QueryObject => ({
@@ -239,7 +243,8 @@ const buildTooltipFieldsObject = ({
     modelName,
     customProps: {}
   })
-  return R.reduce(
+  return RE.reduce(
+    fields,
     (accumulator, fieldName: string) => {
       const type = schema.getType(modelName, fieldName)
       if (type && type.includes('ToMany')) {
@@ -260,8 +265,7 @@ const buildTooltipFieldsObject = ({
         return R.assoc(fieldName, true, accumulator)
       }
     },
-    {},
-    fields
+    {}
   )
 }
 
@@ -310,22 +314,21 @@ const buildFieldsObject = ({
         return {}
     }
   })()
-  fields = R.mergeDeepLeft(requiredObj, fields)
+  fields = RE.merge(fields, requiredObj)
   // replace with query object when fieldName is Relationship type
-  fields = R.mapObjIndexed((val, key) => {
+  fields = RE.mapValues(fields, (val, key) => {
     const field = schema.getField(modelName, key)
     if (!schema.isRel(modelName, key)) {
       return val
     }
-
+    const fieldType = field?.type
     return buildFieldsObject({
       schema,
       queryType: getFieldQueryType(queryType),
-      modelName: R.path(['type', 'target'], field) as string,
+      modelName: isFieldTypeObject(fieldType) ? fieldType.target : fieldType,
       queryFields: getRelTableFields({ model, fieldName: key })
     })
-  }, fields)
-
+  })
   return fields
 }
 
@@ -345,34 +348,32 @@ const buildSearchFieldsObject = (
     fields[model.displayField] = true
   }
 
-  fields = R.mergeDeepLeft(requiredObj, fields)
+  fields = RE.merge(fields, requiredObj)
 
   fields.__typeName = model.modelName
 
-  fields = R.mapObjIndexed((val, key) => {
-    const field = schema.getField(model.modelName, key)
-    if (!schema.isRel(model.modelName, key) || !field) {
+  fields = RE.mapValues(fields, (val, key) => {
+    const field = schema.getField(model.modelName, key.toString())
+    if (!schema.isRel(model.modelName, key.toString()) || !field) {
       return val
     }
-
     const fieldType = field.type as FieldTypeObject
 
     return buildSearchFieldsObject(
       schema,
       schema.getModel(fieldType.target ?? '')
     )
-  }, fields)
-
+  })
   return fields
 }
 
 const buildSearchFieldsArray = (schema: SchemaBuilder): QueryObject[] => {
   const fieldsArray: QueryObject[] = []
-  R.forEachObjIndexed((model) => {
+  RE.forEachObj(schema.schemaJSON, (model) => {
     if (schema.getSearchable(model.modelName)) {
       fieldsArray.push(buildSearchFieldsObject(schema, model))
     }
-  }, schema.schemaJSON)
+  })
   return fieldsArray
 }
 
@@ -393,30 +394,28 @@ const buildCascadesObject = (
     cascades[model.displayField] = true
   }
 
-  cascades = R.mergeDeepLeft(requiredObj, cascades)
+  cascades = RE.merge(cascades, requiredObj)
 
   cascades.__typeName = model.modelName
 
-  cascades = R.mapObjIndexed((val, key) => {
-    const field = schema.getField(model.modelName, key)
-    if (!schema.isRel(model.modelName, key) || !field) {
+  cascades = RE.mapValues(cascades, (val, key) => {
+    const field = schema.getField(model.modelName, key.toString())
+    if (!schema.isRel(model.modelName, key.toString()) || !field) {
       return val
     }
-
     const fieldType = field.type as FieldTypeObject
 
     return buildCascadesObject(schema, schema.getModel(fieldType.target ?? ''))
-  }, cascades)
-
+  })
   return cascades
 }
 
 const buildDeleteCascadesArray = (schema: SchemaBuilder): QueryObject[] => {
   const cascadesArray: QueryObject[] = []
-  R.forEachObjIndexed((model) => {
+  RE.forEachObj(schema.schemaJSON, (model) => {
     if (model.showDeleteModal !== false)
       cascadesArray.push(buildCascadesObject(schema, model))
-  }, schema.schemaJSON)
+  })
   return cascadesArray
 }
 
